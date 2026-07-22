@@ -422,7 +422,10 @@
     
     if (w.completed) {
       el.innerHTML += `<div style="text-align:center; color:green; font-weight:bold; margin-top:5px;">✓ Selesai</div>`;
-    } else if (w.char.length > 1) {
+    } 
+    
+    // Split button hanya muncul jika belum selesai dan memiliki lebih dari 1 karakter
+    if (!w.completed && w.char.length > 1) {
       const splitBtn = document.createElement('button');
       splitBtn.className = 'vocab-split-btn';
       splitBtn.textContent = 'Split Huruf';
@@ -434,18 +437,17 @@
     }
     
     el.onclick = () => {
-      if(!w.completed) {
-        w.selected = !w.selected;
-        renderList();
-        updateFAB();
-      }
+      // Murid bisa mengklik ulang kata yang sudah selesai untuk melatihnya lagi
+      w.selected = !w.selected;
+      renderList();
+      updateFAB();
     };
     
     return el;
   }
   
   function updateFAB() {
-    const selectedCount = assignmentData.words.filter(w => w.selected && !w.completed).length;
+    const selectedCount = assignmentData.words.filter(w => w.selected).length;
     const btn = document.getElementById('floatingStartBtn');
     if (selectedCount > 0) {
       btn.style.display = 'block';
@@ -486,7 +488,7 @@
   function startQueue() {
     practiceQueue = [];
     assignmentData.words.forEach((w, i) => {
-      if (w.selected && !w.completed) {
+      if (w.selected) {
         practiceQueue.push(i);
       }
     });
