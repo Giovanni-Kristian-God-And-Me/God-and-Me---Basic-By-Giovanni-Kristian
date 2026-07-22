@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Latihan Hanzi</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+  <script src="brushstrokedb.js"></script>
+  
+  <style>
+    :root {
+      --primary: #8B3DFF;
+      --primary-dark: #00C4CC;
+      --bg: #F9FAFB;
+      --card: #FFFFFF;
+      --text: #0E1318;
+      --error: #FF3B30;
+      --success: #34C759;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .header {
+      text-align: center;
+      padding: 15px;
+      background: var(--card);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .toggle-container {
+      display: flex;
+      gap: 15px;
+      background: #f1f5f9;
+      padding: 5px;
+      border-radius: 8px;
+    }
+    
+    .toggle-container label {
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+    
+    .toggle-container input[type="radio"] {
+      display: none;
+    }
+    
+    .toggle-container input[type="radio"]:checked + span {
+      color: var(--primary);
+    }
+    
+    .mode-btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+    }
+    
+    .toggle-container input[type="radio"]:checked ~ .mode-btn {
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .setting-toggles {
+      display: flex;
+      gap: 10px;
+      margin-top: 5px;
+    }
+    .setting-toggles label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #F1F5F9;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #475569;
+      transition: all 0.2s ease;
+      border: 1px solid #E2E8F0;
+    }
+    .setting-toggles input[type="checkbox"] {
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+    }
+    .setting-toggles label:has(input:checked) {
+      background: #F5F3FF;
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .word-pinyin { font-size: 1.5rem; font-weight: bold; color: var(--primary-dark); }
+    .word-meaning { font-size: 1rem; color: #5E6A75; }
+    
+    .main-area {
+      flex: 1;
+      display: none; /* Disembunyikan saat memilih kosakata */
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .writer-container {
+      position: relative;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    #writer-target {
+      background: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .input-section {
+      width: 100%;
+      max-width: 400px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .input-group { display: flex; flex-direction: column; }
+    .input-group label { font-size: 0.9rem; color: gray; margin-bottom: 5px; font-weight: bold; }
+    .input-group input { padding: 12px; font-size: 1.1rem; border-radius: 8px; border: 2px solid #E5E7EB; outline: none; text-align: center; }
+    .input-group input:focus { border-color: var(--primary); }
+    .input-group input.error { border-color: var(--error); background-color: rgba(255, 59, 48, 0.05); }
+    .input-group input.success { border-color: var(--success); background-color: rgba(52, 199, 89, 0.05); }
+    
+    .hint-text { color: var(--error); font-size: 0.85rem; margin-top: 5px; text-align: center; display: none; }
+    
+    .btn-submit {
+      padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px;
+      font-size: 1.1rem; font-weight: bold; cursor: pointer;
+    }
+    
+    /* Bottom List */
+    .vocab-list-area {
+      flex: 1;
+      background: white;
+      border-top: 1px solid #E5E7EB;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .vocab-list-area h3 { margin-bottom: 10px; font-size: 1.1rem; color: #333; }
+    
+    #vocabListContainer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 600px) { #vocabListContainer { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px) { #vocabListContainer { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1200px) { #vocabListContainer { grid-template-columns: repeat(5, 1fr); } }
+    
+    .vocab-item {
+      background-color: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s ease-in-out;
+    }
+    .vocab-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+      border-color: #cbd5e1;
+    }
+    .vocab-item.completed { background-color: #f0fdf4; border-color: #bbf7d0; opacity: 0.6; box-shadow: none; transform: none; }
+    .vocab-item.selected { 
+      border-color: var(--primary); 
+      box-shadow: 0 0 0 3px rgba(139,61,255,0.3); 
+      background-color: #F5F3FF; 
+    }
+    
+    .vocab-split-group {
+      display: flex;
+      grid-column: 1 / -1; /* Tampil selebar layar */
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      background: #FFFFFF;
+    }
+    .vocab-split-group .vocab-item {
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      flex: 1;
+      border-right: 2px dashed #E2E8F0;
+      transform: none !important;
+      margin-bottom: 0;
+    }
+    .vocab-split-group .vocab-item:last-child {
+      border-right: none;
+    }
+    .vocab-split-group .vocab-item.selected {
+      background-color: #F5F3FF;
+      box-shadow: inset 0 0 0 3px var(--primary);
+    }
+    
+    .vocab-char { font-size: 1.8rem; font-weight: bold; text-align: center; }
+    .vocab-pinyin { font-size: 0.9rem; color: gray; text-align: center; }
+    .vocab-meaning { font-size: 0.8rem; color: #555; text-align: center; }
+    
+    .vocab-split-btn {
+      background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px;
+      font-size: 0.8rem; cursor: pointer; font-weight: bold;
+      width: 100%; margin-top: auto;
+    }
+    
+    .floating-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      box-shadow: 0 4px 15px rgba(139,61,255,0.4);
+      cursor: pointer;
+      z-index: 100;
+      width: 90%;
+      max-width: 400px;
+      display: none;
+    }
+    
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="toggle-container">
+    <label>
+      <input type="radio" name="mode" value="easy" checked>
+      <span class="mode-btn">🟢 Easy Mode</span>
+    </label>
+    <label>
+      <input type="radio" name="mode" value="normal">
+      <span class="mode-btn">🔴 Normal Mode</span>
+    </label>
+  </div>
+  <div class="setting-toggles">
+    <label><input type="checkbox" id="latihPinyin" checked> Ketik Pinyin</label>
+    <label><input type="checkbox" id="latihArti" checked> Ketik Arti</label>
+  </div>
+</div>
+
+<div class="main-area" id="mainArea">
+  <div style="margin-bottom: 15px; text-align: center;">
+    <div class="word-pinyin" id="wordPinyin">-</div>
+    <div class="word-meaning" id="wordMeaning">-</div>
+  </div>
+  <div class="writer-container" id="writer-container">
+    <div id="writer-target"></div>
+  </div>
+  
+  <div class="input-section" id="inputSection">
+    <div class="input-group" id="groupPinyin">
+      <label>Ketik Pinyin:</label>
+      <input type="text" id="inputPinyin" autocomplete="off" placeholder="contoh: wo">
+      <div class="hint-text" id="hintPinyin"></div>
+    </div>
+    <div class="input-group" id="groupMeaning">
+      <label>Ketik Arti:</label>
+      <input type="text" id="inputMeaning" autocomplete="off" placeholder="contoh: saya">
+      <div class="hint-text" id="hintMeaning"></div>
+    </div>
+    <button class="btn-submit" id="btnSubmitText">Kirim Jawaban</button>
+  </div>
+</div>
+
+<div class="vocab-list-area" id="vocabListArea">
+  <h3 style="text-align: center; margin-bottom: 15px;">Pilih Kata Untuk Dilatih</h3>
+  <div id="vocabListContainer"></div>
+</div>
+
+<button id="floatingStartBtn" class="floating-btn" onclick="startQueue()">Mulai Latihan (0 Kata)</button>
+
+<script>
+  let assignmentData = null;
+  let writer = null;
+  
+  // State for current practice
+  let currentWordIndex = -1;
+  let currentCharIdx = 0; // if word has multiple characters
+  let textMistakes = { pinyin: 0, meaning: 0 };
+  
+  let practiceQueue = [];
+  let currentQueueIndex = 0;
+
+  window.onload = () => {
+    try {
+      const hash = window.location.hash.substring(6); 
+      if(!hash) throw new Error("Kosong");
+      const jsonStr = decodeURIComponent(escape(atob(hash)));
+      assignmentData = JSON.parse(jsonStr);
+      
+      // Add completion & selection tracking
+      assignmentData.words.forEach(w => {
+        w.completed = false;
+        w.selected = false;
+      });
+      
+      renderList();
+    } catch(err) {
+      document.getElementById('vocabListContainer').innerHTML = '<p style="color:red">Gagal memuat data tugas. Pastikan link yang diberikan guru sudah benar.</p>';
+    }
+  };
+  
+  // RENDER LIST BELOW
+  function renderList() {
+    const container = document.getElementById('vocabListContainer');
+    container.innerHTML = '';
+    
+    let i = 0;
+    while (i < assignmentData.words.length) {
+      const w = assignmentData.words[i];
+      
+      // Jika kata ini memiliki splitId, kumpulkan semua kata dengan splitId yang sama
+      if (w.splitId) {
+        let group = [w];
+        let groupIndices = [i];
+        let j = i + 1;
+        while (j < assignmentData.words.length && assignmentData.words[j].splitId === w.splitId) {
+          group.push(assignmentData.words[j]);
+          groupIndices.push(j);
+          j++;
+        }
+        
+        const groupEl = document.createElement('div');
+        groupEl.className = 'vocab-split-group';
+        
+        group.forEach((gw, gIdx) => {
+          const el = createVocabElement(gw, groupIndices[gIdx]);
+          groupEl.appendChild(el);
+        });
+        
+        container.appendChild(groupEl);
+        i = j;
+      } else {
+        const el = createVocabElement(w, i);
+        container.appendChild(el);
+        i++;
+      }
+    }
+  }
+  
+  function createVocabElement(w, index) {
+    const el = document.createElement('div');
+    el.className = 'vocab-item';
+    el.id = 'vocab-item-' + index;
+    if (w.completed) el.classList.add('completed');
+    if (w.selected) el.classList.add('selected');
+    
+    el.innerHTML = `
+      <div class="vocab-char">${w.char}</div>
+      <div class="vocab-pinyin">${w.pinyin}</div>
+      <div class="vocab-meaning">${w.meaning}</div>
+    `;
+    
+    if (w.completed) {
+      el.innerHTML += `<div style="text-align:center; color:green; font-weight:bold; margin-top:5px;">✓ Selesai</div>`;
+    } else if (w.char.length > 1) {
+      const splitBtn = document.createElement('button');
+      splitBtn.className = 'vocab-split-btn';
+      splitBtn.textContent = 'Split Huruf';
+      splitBtn.onclick = (e) => {
+        e.stopPropagation();
+        splitWord(index);
+      };
+      el.appendChild(splitBtn);
+    }
+    
+    el.onclick = () => {
+      if(!w.completed) {
+        w.selected = !w.selected;
+        renderList();
+        updateFAB();
+      }
+    };
+    
+    return el;
+  }
+  
+  function updateFAB() {
+    const selectedCount = assignmentData.words.filter(w => w.selected && !w.completed).length;
+    const btn = document.getElementById('floatingStartBtn');
+    if (selectedCount > 0) {
+      btn.style.display = 'block';
+      btn.textContent = `Mulai Latihan (${selectedCount} Kata)`;
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+  
+  function splitWord(index) {
+    const word = assignmentData.words[index];
+    const chars = word.char.split('');
+    const splitGroupId = 'split-' + Date.now() + '-' + index;
+    const newItems = chars.map(c => ({
+      char: c,
+      pinyin: word.pinyin,
+      meaning: word.meaning,
+      completed: false,
+      selected: false,
+      splitId: splitGroupId
+    }));
+    
+    assignmentData.words.splice(index, 1, ...newItems);
+    
+    // reset if active word was split
+    if (currentWordIndex === index) {
+      currentWordIndex = -1;
+      document.getElementById('writer-container').style.display = 'none';
+      document.getElementById('inputSection').style.display = 'none';
+    } else if (currentWordIndex > index) {
+      currentWordIndex += (chars.length - 1);
+    }
+    
+    renderList();
+    updateFAB();
+  }
+  
+  function startQueue() {
+    practiceQueue = [];
+    assignmentData.words.forEach((w, i) => {
+      if (w.selected && !w.completed) {
+        practiceQueue.push(i);
+      }
+    });
+    
+    if (practiceQueue.length === 0) return;
+    
+    currentQueueIndex = 0;
+    
+    document.getElementById('vocabListArea').style.display = 'none';
+    document.getElementById('floatingStartBtn').style.display = 'none';
+    document.getElementById('mainArea').style.display = 'flex';
+    
+    startPractice(practiceQueue[currentQueueIndex]);
+  }
+
+  // START PRACTICE
+  function startPractice(index) {
+    const wordObj = assignmentData.words[index];
+    currentWordIndex = index;
+    currentCharIdx = 0;
+    
+    document.getElementById('wordPinyin').textContent = wordObj.pinyin || "—";
+    document.getElementById('wordMeaning').textContent = wordObj.meaning || "—";
+    
+    document.getElementById('inputSection').style.display = 'none';
+    document.getElementById('writer-container').style.display = 'block';
+    
+    const size = Math.min(300, window.innerWidth - 40);
+    const target = document.getElementById('writer-target');
+    target.style.width = size + 'px';
+    target.style.height = size + 'px';
+    
+    document.getElementById('writer-container').style.width = size + 'px';
+    document.getElementById('writer-container').style.height = size + 'px';
+    
+    loadCharacter();
+  }
+  
+  function loadCharacter() {
+    const wordObj = assignmentData.words[currentWordIndex];
+    const char = wordObj.char[currentCharIdx];
+    
+    const isEasy = document.querySelector('input[name="mode"]:checked').value === 'easy';
+    // Di Easy Mode, kita kontrol panduan secara manual (menggunakan highlightStroke).
+    // Jadi internal missLimit diset tinggi agar tidak bentrok.
+    const missLimit = isEasy ? 99 : 3;
+    
+    if(!writer) {
+      document.getElementById('writer-target').innerHTML = '';
+      writer = HanziWriter.create('writer-target', char, {
+        width: Math.min(300, window.innerWidth - 40),
+        height: Math.min(300, window.innerWidth - 40),
+        padding: 10,
+        showCharacter: false,
+        showOutline: true, 
+        strokeAnimationSpeed: 1, 
+        strokeHighlightSpeed: isEasy ? 0.5 : 2, // Pelan 50% dari default (2) di easy mode
+        strokeColor: '#1e293b',
+        outlineColor: '#e2e8f0',
+        drawingColor: '#8B3DFF',
+        drawingWidth: 20,
+        drawingFadeDuration: 400,
+        highlightOnComplete: true,
+        highlightColor: '#EF4444', // Warna panduan merah
+        leniency: 0.85,
+        charDataLoader: function(c, onLoad) {
+          onLoad((typeof BM_STROKE_DATA !== 'undefined' && BM_STROKE_DATA[c]) || null);
+        }
+      });
+      setTimeout(() => startQuiz(missLimit, isEasy), 300);
+    } else {
+      writer.updateColor('highlightColor', '#EF4444');
+      // Update options globally
+      writer.updateColor('strokeColor', '#1e293b');
+      writer.setCharacter(char).then(() => {
+        setTimeout(() => startQuiz(missLimit, isEasy), 100);
+      });
+    }
+  }
+  
+  function startQuiz(missLimit, isEasy) {
+    let charCompleted = false;
+    const speedOpt = isEasy ? { strokeHighlightSpeed: 0.5 } : {};
+    
+    writer.quiz({
+      showHintAfterMisses: missLimit,
+      onMistake: function(strokeData) {
+        if (isEasy && !charCompleted) {
+          writer.highlightStroke(strokeData.strokeNum, speedOpt);
+        }
+      },
+      onCorrectStroke: function(strokeData) {
+        if (isEasy && !charCompleted) {
+          setTimeout(() => {
+            if (!charCompleted) {
+              writer.highlightStroke(strokeData.strokeNum + 1, speedOpt).catch(e => {}); 
+            }
+          }, 100);
+        }
+      },
+      onComplete: function(summaryData) {
+        charCompleted = true;
+        currentCharIdx++;
+        const wordObj = assignmentData.words[currentWordIndex];
+        if (currentCharIdx < wordObj.char.length) {
+          setTimeout(loadCharacter, 800);
+        } else {
+          setTimeout(showTextInput, 800);
+        }
+      }
+    });
+    
+    // Auto-tampilkan guratan pertama di awal
+    if (isEasy) {
+      setTimeout(() => {
+        if (!charCompleted) writer.highlightStroke(0, speedOpt);
+      }, 200);
+    }
+  }
+  
+  // TYPING LOGIC
+  function convertPinyinToNumeric(pinyinText) {
+    if (!pinyinText) return "";
+    const toneMap = {
+      'ā':'a1', 'á':'a2', 'ǎ':'a3', 'à':'a4',
+      'ē':'e1', 'é':'e2', 'ě':'e3', 'è':'e4',
+      'ī':'i1', 'í':'i2', 'ǐ':'i3', 'ì':'i4',
+      'ō':'o1', 'ó':'o2', 'ǒ':'o3', 'ò':'o4',
+      'ū':'u1', 'ú':'u2', 'ǔ':'u3', 'ù':'u4',
+      'ǖ':'v1', 'ǘ':'v2', 'ǚ':'v3', 'ǜ':'v4', 'ü':'v'
+    };
+    
+    let result = pinyinText.toLowerCase();
+    let words = result.split(' ');
+    let convertedWords = words.map(word => {
+      let tone = '';
+      let newWord = '';
+      for (let char of word) {
+        if (toneMap[char]) {
+          newWord += toneMap[char][0];
+          if (toneMap[char].length > 1) tone = toneMap[char][1];
+        } else {
+          newWord += char;
+        }
+      }
+      return newWord + tone;
+    });
+    return convertedWords.join(' ');
+  }
+
+  function showTextInput() {
+    const reqPinyin = document.getElementById('latihPinyin').checked;
+    const reqMeaning = document.getElementById('latihArti').checked;
+    
+    if (!reqPinyin && !reqMeaning) {
+      finishWord();
+      return;
+    }
+    
+    const isEasy = document.querySelector('input[name="mode"]:checked').value === 'easy';
+    textMistakes = { pinyin: 0, meaning: 0 };
+    
+    document.getElementById('writer-container').style.display = 'none';
+    document.getElementById('inputSection').style.display = 'flex';
+    
+    const gp = document.getElementById('groupPinyin');
+    const gm = document.getElementById('groupMeaning');
+    const ip = document.getElementById('inputPinyin');
+    const im = document.getElementById('inputMeaning');
+    
+    ip.value = ''; im.value = '';
+    ip.className = ''; im.className = '';
+    document.getElementById('hintPinyin').style.display = 'none';
+    document.getElementById('hintMeaning').style.display = 'none';
+    
+    if (reqPinyin) gp.style.display = 'flex'; else gp.style.display = 'none';
+    if (reqMeaning) gm.style.display = 'flex'; else gm.style.display = 'none';
+    
+    const task = assignmentData.words[currentWordIndex];
+    
+    if (isEasy) {
+      ip.placeholder = reqPinyin ? `contoh: ${task.pinyin} ditulis ${convertPinyinToNumeric(task.pinyin)}` : "";
+      im.placeholder = reqMeaning ? `Ketik: ${task.meaning}` : "";
+    } else {
+      ip.placeholder = "contoh: wǒ ditulis wo3";
+      im.placeholder = "Ketik arti...";
+    }
+  }
+  
+  function normalizeText(text) {
+    if(!text) return "";
+    return text.toLowerCase().trim().replace(/[^a-z0-9]/g, ''); 
+  }
+  
+  document.getElementById('btnSubmitText').addEventListener('click', () => {
+    const task = assignmentData.words[currentWordIndex];
+    const reqPinyin = document.getElementById('latihPinyin').checked;
+    const reqMeaning = document.getElementById('latihArti').checked;
+    const isEasy = document.querySelector('input[name="mode"]:checked').value === 'easy';
+    
+    let pinyinPass = true;
+    let meaningPass = true;
+    
+    if (reqPinyin) {
+      const ip = document.getElementById('inputPinyin');
+      const hp = document.getElementById('hintPinyin');
+      
+      const expectedPinyin = convertPinyinToNumeric(task.pinyin);
+      const expected = normalizeText(expectedPinyin);
+      const typed = normalizeText(ip.value);
+      
+      if (typed !== expected) {
+        pinyinPass = false;
+        textMistakes.pinyin++;
+        ip.classList.add('error');
+        
+        // Pop-up check for 'v'
+        if (textMistakes.pinyin === 1 && expected.includes('v')) {
+          alert("Tips Pinyin: Gunakan huruf 'v' di keyboard Anda untuk mengetik huruf 'ü' (u titik dua).");
+        }
+        
+        // Normal mode: salah 2x baru muncul kunci jawaban. Easy mode tidak relevan karena placeholder sudah tertulis
+        if (textMistakes.pinyin >= 2 && !isEasy) {
+          hp.style.display = 'block';
+          hp.textContent = `Jawaban benar: ${expectedPinyin}`;
+        }
+      } else {
+        ip.classList.remove('error'); ip.classList.add('success'); hp.style.display = 'none';
+      }
+    }
+    
+    if (reqMeaning) {
+      const im = document.getElementById('inputMeaning');
+      const hm = document.getElementById('hintMeaning');
+      const expected = normalizeText(task.meaning);
+      const typed = normalizeText(im.value);
+      
+      if (typed !== expected) {
+        meaningPass = false;
+        textMistakes.meaning++;
+        im.classList.add('error');
+        if (textMistakes.meaning >= 2 && !isEasy) {
+          hm.style.display = 'block';
+          hm.textContent = `Jawaban benar: ${task.meaning}`;
+        }
+      } else {
+        im.classList.remove('error'); im.classList.add('success'); hm.style.display = 'none';
+      }
+    }
+    
+    if (pinyinPass && meaningPass) {
+      document.getElementById('inputSection').style.display = 'none';
+      finishWord();
+    }
+  });
+  
+  function finishWord() {
+    const finishedIndex = currentWordIndex;
+    assignmentData.words[finishedIndex].completed = true;
+    assignmentData.words[finishedIndex].selected = false;
+    currentWordIndex = -1;
+    
+    currentQueueIndex++;
+    
+    if (currentQueueIndex < practiceQueue.length) {
+      // Lanjut ke antrean berikutnya
+      document.getElementById('writer-container').style.display = 'none';
+      document.getElementById('inputSection').style.display = 'none';
+      startPractice(practiceQueue[currentQueueIndex]);
+    } else {
+      // Antrean selesai
+      document.getElementById('writer-container').style.display = 'none';
+      document.getElementById('inputSection').style.display = 'none';
+      document.getElementById('mainArea').style.display = 'none';
+      document.getElementById('vocabListArea').style.display = 'block';
+      
+      renderList();
+      updateFAB();
+      
+      // Scroll ke kata terakhir yang diselesaikan
+      const targetEl = document.getElementById('vocab-item-' + finishedIndex);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  // Jika user ganti mode di tengah pengerjaan, muat ulang kanvas/input
+  document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (currentWordIndex !== -1) {
+        const isCanvasVisible = document.getElementById('writer-container').style.display === 'block';
+        if(isCanvasVisible) {
+          loadCharacter(); // mereset quiz dengan missLimit yang baru
+        } else {
+          showTextInput(); // mereset placeholder input text
+        }
+      }
+    });
+  });
+
+</script>
+</body>
+</html>
