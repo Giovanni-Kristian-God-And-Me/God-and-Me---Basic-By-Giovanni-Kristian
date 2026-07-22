@@ -7,6 +7,7 @@
   
   <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
   <script src="brushstrokedb.js"></script>
+  <script src="newbookdb.js"></script>
   
   <style>
     :root {
@@ -323,10 +324,37 @@
 
   window.onload = () => {
     try {
-      const hash = window.location.hash.substring(6); 
-      if(!hash) throw new Error("Kosong");
+      const hash = window.location.hash.replace('#data=', '');
+      if (!hash) throw new Error("No data");
       const jsonStr = decodeURIComponent(escape(atob(hash)));
-      assignmentData = JSON.parse(jsonStr);
+      const rawData = JSON.parse(jsonStr);
+      
+      let finalWords = [];
+      
+      if (rawData.words && Array.isArray(rawData.words)) {
+         // Kompatibilitas format lama
+         finalWords = rawData.words;
+      } else if (rawData.b && rawData.v) {
+         // Format baru yang dioptimasi
+         const bookName = rawData.b;
+         const bookData = (typeof _bookDB !== 'undefined') ? _bookDB[bookName] : null;
+         
+         if (bookData) {
+           Object.keys(rawData.v).forEach(chapterKey => {
+             const charList = rawData.v[chapterKey];
+             const chapterVocab = bookData[chapterKey] ? bookData[chapterKey].vocab : [];
+             
+             charList.forEach(c => {
+               const found = chapterVocab.find(x => x.char === c);
+               if (found) {
+                 finalWords.push({ char: found.char, pinyin: found.pinyin, meaning: found.id });
+               }
+             });
+           });
+         }
+      }
+      
+      assignmentData = { words: finalWords };
       
       // Add completion & selection tracking
       assignmentData.words.forEach(w => {
@@ -335,8 +363,9 @@
       });
       
       renderList();
-    } catch(err) {
-      document.getElementById('vocabListContainer').innerHTML = '<p style="color:red">Gagal memuat data tugas. Pastikan link yang diberikan guru sudah benar.</p>';
+    } catch (err) {
+      console.error(err);
+      document.getElementById('vocabListContainer').innerHTML = '<p style="color:red;text-align:center;">Data tugas tidak valid atau kosong.</p>';
     }
   };
   

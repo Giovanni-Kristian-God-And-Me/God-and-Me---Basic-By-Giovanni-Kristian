@@ -143,6 +143,7 @@
         checkbox.dataset.char = v.char;
         checkbox.dataset.pinyin = v.pinyin;
         checkbox.dataset.meaning = v.id;
+        checkbox.dataset.chapter = chapterKey;
         
         checkbox.addEventListener('change', updateSelectedVocabList);
         
@@ -164,10 +165,10 @@
     checkboxes.forEach(cb => {
       selectedVocabs.push({
         char: cb.dataset.char,
-        pinyin: cb.dataset.pinyin,
-        meaning: cb.dataset.meaning
+        chapter: cb.dataset.chapter
       });
     });
+    generateBtn.textContent = `Generate Link Tugas (${selectedVocabs.length} Kosakata)`;
   }
 
   generateBtn.addEventListener('click', () => {
@@ -176,9 +177,17 @@
       return;
     }
     
+    // Format baru: hanya simpan referensi nama buku, bab, dan karakter
+    const book = bookSelect.value;
+    const vMap = {};
+    selectedVocabs.forEach(v => {
+      if (!vMap[v.chapter]) vMap[v.chapter] = [];
+      vMap[v.chapter].push(v.char);
+    });
+    
     const payload = {
-      words: selectedVocabs,
-      timestamp: Date.now()
+      b: book,
+      v: vMap
     };
     
     const payloadStr = JSON.stringify(payload);
