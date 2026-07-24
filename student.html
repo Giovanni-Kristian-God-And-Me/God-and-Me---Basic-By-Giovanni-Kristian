@@ -554,8 +554,25 @@
         highlightOnComplete: true,
         highlightColor: '#EF4444', // Warna panduan merah
         leniency: 0.85,
-        charDataLoader: function(c, onLoad) {
-          onLoad((typeof BM_STROKE_DATA !== 'undefined' && BM_STROKE_DATA[c]) || null);
+        charDataLoader: function(c, onLoad, onError) {
+          if (typeof BM_STROKE_DATA !== 'undefined' && BM_STROKE_DATA[c]) {
+            onLoad(BM_STROKE_DATA[c]);
+          } else {
+            // Auto fallback ke CDN jika huruf tidak ada di database lokal
+            fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/' + c + '.json')
+              .then(response => {
+                 if (!response.ok) throw new Error('Not found');
+                 return response.json();
+              })
+              .then(data => {
+                 if (typeof BM_STROKE_DATA !== 'undefined') BM_STROKE_DATA[c] = data; // Cache
+                 onLoad(data);
+              })
+              .catch(err => {
+                 console.error('Gagal mengambil data untuk: ' + c, err);
+                 if (onError) onError(err);
+              });
+          }
         }
       });
       setTimeout(() => startQuiz(missLimit, isEasy), 300);
